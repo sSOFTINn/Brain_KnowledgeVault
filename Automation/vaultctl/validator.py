@@ -15,6 +15,8 @@ from .scaffold import DIRECTORIES
 
 WIKILINK = re.compile(r"\[\[([^\]|#]+)")
 PLACEHOLDER = re.compile(r"\{\{[^}]+\}\}")
+PACKAGE_SIDECAR = "PACKAGE.asset.md"
+OPERATIONAL_NAMES = {".git", ".venv", "node_modules", "__pycache__"}
 WINDOWS_RESERVED = {
     "con", "prn", "aux", "nul",
     *(f"com{i}" for i in range(1, 10)),
@@ -38,6 +40,58 @@ def _digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_operational_path(path: Path, config: Config) -> bool:
+    if _inside(path, config.tool_state) or _inside(path, config.runtime):
+        return True
+    relative = path.relative_to(config.root)
+    return any(part.casefold() in OPERATIONAL_NAMES for part in relative.parts)
+
+
+def _wikilink_key(target: str) -> str:
+    value = target.strip().replace("\\", "/").strip("/")
+    while value.startswith("./"):
+        value = value[2:]
+    if value.casefold().endswith(".md"):
+        value = value[:-3]
+    return value.casefold()
+
+
+def _tree_digest(root: Path) -> str:
+    digest = sha256()
+    files = sorted(
+        (
+            path
+            for path in root.rglob("*")
+            if path.is_file() and not path.name.endswith(".asset.md")
+        ),
+        key=lambda path: path.relative_to(root).as_posix().casefold(),
+    )
+    for path in files:
+        relative = path.relative_to(root).as_posix()
+        record = f"{relative}\0{path.stat().st_size}\0{_digest(path)}\n"
+        digest.update(record.encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _package_root(path: Path, assets: Path, packages: set[Path]) -> Path | None:
+    current = path.parent
+    while _inside(current, assets):
+        if current in packages:
+            return current
+        if current == assets:
+            break
+        current = current.parent
+    return None
+
+
 def validate_vault(config: Config) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -57,7 +111,7 @@ def validate_vault(config: Config) -> list[Finding]:
             add("ERROR", "missing-directory", path, "required directory is missing")
 
     if backup_includes_private(config):
-        add("WARN", "backup-private-scope", config.private, "Private is included only in encrypted backup scope; AI/RAG/Graph remain excluded")
+        add("PASS", "backup-private-scope", config.private, "Private is included only in encrypted backup scope; AI/RAG/Graph remain excluded")
 
     if config.git_enabled:
         for path in oversized_tracked_files(config):
@@ -73,11 +127,14 @@ def validate_vault(config: Config) -> list[Finding]:
 
     markdown = sorted(config.vault.rglob("*.md"))
     stems: dict[str, list[Path]] = {}
+    link_paths: dict[str, list[Path]] = {}
     uid_paths: dict[str, Path] = {}
     metadata_by_path: dict[Path, dict] = {}
     case_paths: dict[str, Path] = {}
 
     for path in config.root.rglob("*"):
+        if _is_operational_path(path, config):
+            continue
         relative_key = str(path.relative_to(config.root)).casefold()
         previous = case_paths.get(relative_key)
         if previous and previous != path:
@@ -95,6 +152,8 @@ def validate_vault(config: Config) -> list[Finding]:
     for path in markdown:
         template = "90_Templates" in path.parts
         stems.setdefault(path.stem.casefold(), []).append(path)
+        link_key = path.relative_to(config.vault).with_suffix("").as_posix().casefold()
+        link_paths.setdefault(link_key, []).append(path)
         try:
             data, body = parse_frontmatter(path)
         except (OSError, UnicodeError, ValueError) as exc:
@@ -126,16 +185,43 @@ def validate_vault(config: Config) -> list[Finding]:
             continue
         text = path.read_text(encoding="utf-8")
         for target in WIKILINK.findall(text):
-            target_stem = Path(target.strip()).stem.casefold()
-            if target_stem not in stems:
+            target_key = _wikilink_key(target)
+            candidates = link_paths.get(target_key, []) if "/" in target_key else stems.get(target_key, [])
+            if not candidates:
                 add("ERROR", "broken-wikilink", path, f"target not found: {target}")
-            elif len(stems[target_stem]) > 1:
+            elif len(candidates) > 1:
                 add("WARN", "ambiguous-wikilink", path, f"multiple targets: {target}")
         if re.search(r"(?i)\b[A-Z]:[\\/]", text):
             add("WARN", "absolute-path", path, "contains an absolute Windows path")
 
     hashes: dict[tuple[int, str], Path] = {}
     if config.assets.exists():
+        package_roots: set[Path] = set()
+        for package_sidecar in sorted(config.assets.rglob(PACKAGE_SIDECAR)):
+            package_root = package_sidecar.parent
+            package_roots.add(package_root)
+            try:
+                data, _ = parse_frontmatter(package_sidecar)
+            except (OSError, UnicodeError, ValueError) as exc:
+                add("ERROR", "asset-package", package_sidecar, str(exc))
+                continue
+            for error in validate_metadata(data):
+                add("ERROR", "asset-package-metadata", package_sidecar, error)
+            if data.get("type") != "asset":
+                add("ERROR", "asset-package-type", package_sidecar, "type must be asset")
+            if data.get("asset_kind") != "package":
+                add("ERROR", "asset-package-kind", package_sidecar, "asset_kind must be package")
+            expected_path = package_root.relative_to(config.assets).as_posix()
+            if data.get("asset_path") != expected_path:
+                add(
+                    "ERROR",
+                    "asset-package-path",
+                    package_sidecar,
+                    f"asset_path must be {expected_path}",
+                )
+            if data.get("sha256") != _tree_digest(package_root):
+                add("ERROR", "asset-package-hash", package_sidecar, "sha256 does not match package tree")
+
         for asset in config.assets.rglob("*"):
             if not asset.is_file() or asset.name.endswith(".asset.md"):
                 continue
@@ -145,6 +231,8 @@ def validate_vault(config: Config) -> list[Finding]:
                 add("WARN", "duplicate-asset", asset, f"same content as {hashes[key]}")
             else:
                 hashes[key] = asset
+            if _package_root(asset, config.assets, package_roots) is not None:
+                continue
             sidecar = asset.with_name(asset.name + ".asset.md")
             if not sidecar.exists():
                 add("WARN", "missing-sidecar", asset, "asset metadata sidecar is missing")
