@@ -1,0 +1,21 @@
+# Python and local environments
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/*.egg-info/
+**/dist/
+**/build/
+
+# Local configuration and secrets
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/secrets/
+**/vault.toml.local
+
+# Generated runtime files
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini

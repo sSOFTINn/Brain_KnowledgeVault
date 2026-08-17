@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://knowledgevault.local/metadata.schema.json",
+  "title": "KnowledgeVault Markdown metadata",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "uid",
+    "type",
+    "title",
+    "status",
+    "created",
+    "updated",
+    "tags",
+    "aliases",
+    "visibility"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "uid": {"type": "string", "format": "uuid"},
+    "type": {
+      "enum": [
+        "project", "area", "note", "research", "how-to", "resource",
+        "document", "task", "decision", "meeting", "postmortem",
+        "context", "memory", "index", "session-log", "asset", "person"
+      ]
+    },
+    "title": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "minLength": 1},
+    "created": {"type": "string", "format": "date"},
+    "updated": {"type": "string", "format": "date"},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "aliases": {"type": "array", "items": {"type": "string"}},
+    "visibility": {"enum": ["public", "internal", "confidential", "restricted"]}
+  },
+  "additionalProperties": true
+}

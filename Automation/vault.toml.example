@@ -1,0 +1,144 @@
+schema_version = 2
+root = "E:/KnowledgeVault"
+
+[machine]
+name = "windows-primary"
+root_volume_label = ""
+root_volume_serial = ""
+backup_volume_label = ""
+backup_volume_serial = ""
+require_distinct_physical_disks = true
+
+[storage]
+marker_file = ".knowledgevault-root.json"
+allow_adopt = false
+
+[paths]
+vault = "20_Knowledge"
+workspaces = "10_Projects"
+assets = "50_Resources/ManagedAssets"
+private = "60_Private"
+runtime = "90_Runtime"
+staging = "90_Runtime/Staging"
+logs = "90_Runtime/Logs"
+inbox = "70_Inbox"
+processed = "80_Archive/ProcessedImports"
+routing_runtime = "90_Runtime/Runs/Import"
+control_plane = "00_System/ControlPlane"
+documents = "30_Documents"
+media = "40_Media"
+resources = "50_Resources"
+archive = "80_Archive"
+quarantine = "99_Quarantine"
+audit = "00_System/Audit"
+manifests = "00_System/Manifests"
+recovery = "00_System/Recovery"
+tool_state = "00_System/ToolState"
+
+[scan]
+follow_symlinks = false
+hash_mode = "duplicates"
+max_workers = 4
+
+[migration]
+default_mode = "copy"
+verify_hash = true
+preserve_timestamps = true
+overwrite = false
+
+[git]
+enabled = true
+max_tracked_file_mb = 10
+
+[privacy]
+default_visibility = "internal"
+allow_ai_confidential = false
+
+[routing]
+auto_threshold = 0.90
+preserve_source = true
+
+[backup]
+repository = "F:/Backup_E/20_ResticRepository"
+password_file = "%LOCALAPPDATA%/KnowledgeVault/restic-password.txt"
+includes = [
+  ".knowledgevault-root.json", "vault.toml.local",
+  "00_System/Config", "00_System/Audit", "00_System/Manifests",
+  "00_System/Policies", "00_System/Recovery", "00_System/ToolState",
+  "10_Projects", "20_Knowledge", "30_Documents", "40_Media",
+  "50_Resources", "60_Private", "70_Inbox", "75_Exports", "80_Archive",
+]
+excludes = [
+  "**/.venv/**", "**/__pycache__/**", "**/node_modules/**",
+  "90_Runtime/**", "99_Quarantine/**",
+]
+keep_daily = 14
+keep_weekly = 8
+keep_monthly = 12
+max_snapshot_age_days = 7
+critical_paths = [
+  "00_System/Policies/STORAGE_LAYOUT.md",
+  "00_System/Manifests/RESTORE_MAP.csv",
+  ".knowledgevault-root.json",
+]
+require_all_includes = true
+minimum_free_gib = 10
+readback_percent = 100
+
+[rag]
+enabled = true
+database = "90_Runtime/Catalog/rag.sqlite3"
+chunk_max_chars = 1800
+chunk_overlap_chars = 200
+default_top_k = 8
+
+[rag.embeddings]
+enabled = false
+provider = "none"
+model = ""
+dimension = 0
+
+[llm]
+enabled = false
+provider = "ollama"
+model = "llama3.1:8b"
+base_url = "http://localhost:11434"
+context_limit_tokens = 8192
+temperature = 0.2
+
+[logging]
+enabled = true
+max_bytes = 1048576
+backup_count = 5
+
+[[projects]]
+code = "PRJ-2026-001"
+name = "KnowledgeVault"
+aliases = ["brain", "knowledge-vault", "second-brain"]
+keywords = ["obsidian", "vaultctl", "migration"]
+source_hints = ["KnowledgeVault", "Brain"]
+
+[[rules]]
+name = "documents"
+extensions = [".pdf", ".doc", ".docx", ".md", ".txt", ".rtf"]
+destination = "30_Documents/Work/Imports"
+
+[[rules]]
+name = "data"
+extensions = [".xlsx", ".xls", ".xlsm", ".csv", ".json"]
+destination = "50_Resources/Data"
+
+[[rules]]
+name = "images"
+extensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]
+destination = "40_Media/Graphics/Imports"
+
+[[rules]]
+name = "code"
+extensions = [".py", ".js", ".ts", ".tsx", ".html", ".css", ".yaml", ".yml", ".ps1"]
+destination = "70_Inbox/Code"
+
+[[rules]]
+name = "archives"
+extensions = [".zip", ".rar", ".7z"]
+destination = "50_Resources/Archives"

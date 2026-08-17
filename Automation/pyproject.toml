@@ -1,0 +1,21 @@
+[project]
+name = "knowledge-vault-automation"
+version = "2.0.0"
+description = "Control plane and safe file automation for KnowledgeVault"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6.0.3,<7",
+  "pypdf>=6.0,<7",
+  "python-docx>=1.2,<2",
+]
+
+[project.scripts]
+vaultctl = "vaultctl.cli:main"
+
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vaultctl*"]

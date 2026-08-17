@@ -1,0 +1,106 @@
+schema_version = 1
+root = "E:/KnowledgeVault"
+
+[paths]
+vault = "Vault"
+workspaces = "Workspaces"
+assets = "Assets"
+private = "Private"
+runtime = "Runtime"
+staging = "Staging"
+logs = "Logs"
+inbox = "Staging/Inbox"
+processed = "Staging/Processed"
+routing_runtime = "Runtime/routing"
+
+[scan]
+follow_symlinks = false
+hash_mode = "duplicates"
+max_workers = 4
+
+[migration]
+default_mode = "copy"
+verify_hash = true
+preserve_timestamps = true
+overwrite = false
+
+[git]
+enabled = true
+max_tracked_file_mb = 10
+
+[privacy]
+default_visibility = "internal"
+allow_ai_confidential = false
+
+[routing]
+auto_threshold = 0.90
+preserve_source = true
+
+[backup]
+repository = "E:/KnowledgeVault_Backup"
+password_file = "%LOCALAPPDATA%/KnowledgeVault/restic-password.txt"
+includes = ["Vault", "Assets", "Private", "Workspaces", "vault.toml", "MANIFEST.md", "Runtime/runs", "Logs", "E:/Brain/Automation"]
+excludes = ["**/.venv/**", "**/__pycache__/**", "Runtime/cache/**", "Runtime/db/**", "Runtime/indexes/**", "Staging/**"]
+keep_daily = 14
+keep_weekly = 8
+keep_monthly = 12
+max_snapshot_age_days = 7
+critical_paths = ["Vault/00_System/Home.md", "vault.toml", "MANIFEST.md", "Vault/02_Projects/Completed/ClearSUHF_Project-main/README.md", "Vault/02_Projects/Active/PRJ-2026-001 KnowledgeVault.md", "Assets/Projects/PRJ-2026-001/docs/plans.md.asset.md"]
+
+[rag]
+enabled = true
+database = "Runtime/db/rag.sqlite3"
+chunk_max_chars = 1800
+chunk_overlap_chars = 200
+default_top_k = 8
+
+[rag.embeddings]
+enabled = false
+provider = "none"
+model = ""
+dimension = 0
+
+[llm]
+enabled = false
+provider = "ollama"
+model = "llama3.1:8b"
+base_url = "http://localhost:11434"
+context_limit_tokens = 8192
+temperature = 0.2
+
+[logging]
+enabled = true
+max_bytes = 1048576
+backup_count = 5
+
+[[projects]]
+code = "PRJ-2026-001"
+name = "KnowledgeVault"
+aliases = ["brain", "knowledge-vault", "second-brain"]
+keywords = ["obsidian", "vaultctl", "migration"]
+source_hints = ["KnowledgeVault", "Brain"]
+
+[[rules]]
+name = "documents"
+extensions = [".pdf", ".doc", ".docx", ".md", ".txt", ".rtf"]
+destination = "Assets/Projects/{project_code}/docs"
+
+[[rules]]
+name = "data"
+extensions = [".xlsx", ".xls", ".xlsm", ".csv", ".json"]
+destination = "Assets/Projects/{project_code}/data"
+
+[[rules]]
+name = "images"
+extensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]
+destination = "Assets/Projects/{project_code}/assets"
+
+[[rules]]
+name = "code"
+extensions = [".py", ".js", ".ts", ".tsx", ".html", ".css", ".yaml", ".yml", ".ps1"]
+destination = "Workspaces/{project_name}/imports"
+
+[[rules]]
+name = "archives"
+extensions = [".zip", ".rar", ".7z"]
+destination = "Assets/Projects/{project_code}/archives"
