@@ -10,6 +10,8 @@
 - **Data plane:** `10_Projects`, `20_Knowledge`, `30_Documents`,
   `40_Media`, `50_Resources`, `60_Private`, `70_Inbox`, `80_Archive`.
 - **Derived/runtime plane:** `90_Runtime`; його можна перебудувати.
+- **Private tool state:** `60_Private\ToolState\Codex`; це канонічний
+  `CODEX_HOME`, який не індексується і не комітиться.
 - **Backup plane:** `F:\Backup_E`; джерело й backup мають бути на різних
   фізичних дисках.
 
@@ -32,6 +34,9 @@
   фізичне розділення source/backup;
 - 100% Restic readback за default і SHA-256 restore drill критичних файлів;
 - read-only аудит підтримуваного перенаправлення даних Windows-профілю;
+- окрема Codex storage policy: перевірка `CODEX_HOME`, canonical/project/
+  staging/audit boundaries, protected AppData/runtime paths і manual-only
+  cleanup plan для відомих тимчасових залишків;
 - індексація `20_Knowledge`, `30_Documents`, документації проєктів,
   дозволених resources/media metadata та `80_Archive`;
 - fail-closed виключення `60_Private`, `.git`, `.env`, credentials,
@@ -49,12 +54,19 @@
 
 ## Встановлення й тести
 
+Для вже створеного Vault запускайте canonical checkout:
+
 ```powershell
-git clone https://github.com/sSOFTINn/Brain_KnowledgeVault.git E:\Brain
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run_tests.ps1
 ```
+
+Для чистого диска спочатку клонуйте репозиторій у тимчасовий bootstrap-path
+поза майбутнім `E:\KnowledgeVault`, виконайте `bootstrap`, а потім перенесіть
+репозиторій через verified `import` до
+`00_System\ControlPlane\Brain_KnowledgeVault`. Це усуває циклічність «проєкт
+створює сховище, всередині якого сам має жити».
 
 `ExecutionPolicy Bypass` діє лише для цього процесу.
 
@@ -64,7 +76,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run_tests.ps1
 `vault.toml.local`, заповніть volume label/serial і не комітьте цей файл.
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\vaultctl.ps1 bootstrap --config .\vault.toml.local --root C:\Temp\KV-Test --dry-run
 .\vaultctl.ps1 bootstrap --config .\vault.toml.local --root C:\Temp\KV-Test
 .\vaultctl.ps1 storage --config C:\Temp\KV-Test\vault.toml.local audit --json
@@ -79,9 +91,10 @@ cd E:\Brain\Automation
 ## Перенесення Git-репозиторіїв
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local plan `
-  --source "E:\Brain" --source "E:\The Codex"
+  --source "C:\KnowledgeVault-Bootstrap\Brain_KnowledgeVault" `
+  --source "<legacy-project-root>"
 .\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local review `
   --plan "<repository_plan.jsonl>"
 .\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local review `
@@ -96,6 +109,18 @@ cd E:\Brain\Automation
 
 `apply` без `--execute` є dry-run. Source не змінюється і не видаляється.
 Репозиторій із reparse point або зайнятим destination не можна затвердити.
+
+## Контроль зберігання Codex
+
+```powershell
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local audit
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local cleanup-plan
+```
+
+`audit` перевіряє, що `CODEX_HOME` дорівнює
+`E:\KnowledgeVault\60_Private\ToolState\Codex`, і класифікує дозволені,
+protected, legacy та cleanup paths. `cleanup-plan` не видаляє файли та не має
+execute-режиму.
 
 ## Backup
 
@@ -116,10 +141,14 @@ untracked/ignored файлів, локальних БД чи документі�
 - [Pre-wipe runbook](PRE_WIPE_RUNBOOK.md)
 - [Disaster recovery](DISASTER_RECOVERY_RUNBOOK.md)
 - [Windows data redirection](WINDOWS_DATA_REDIRECTION.md)
+- [Codex storage policy](CODEX_STORAGE_POLICY.md)
+- [Control-plane bootstrap model](CONTROL_PLANE_BOOTSTRAP.md)
+- [Codex storage runbook](Automation/docs/CODEX_STORAGE_RUNBOOK.md)
 - [User guide](USER_GUIDE.md)
 - [Security policy](SECURITY.md)
 - [Головна специфікація](plans.md)
 - [ADR-002](Automation/docs/ADR-002_STORAGE_ROOT_AND_BACKUP.md)
+- [ADR-003: Codex storage boundaries](Automation/docs/ADR-003_CODEX_STORAGE_BOUNDARIES.md)
 
 Історичний аудит 2026-07-11 у `audit/` не переписується. Поточний стан
 фіксується тестами, changelog і новими audit/manifests v2.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -63,6 +64,30 @@ def run_doctor(config: Config) -> list[Check]:
     add("PASS" if config.preserve_source else "FAIL", "source-retention", "source is preserved")
     add("PASS" if not config.follow_symlinks else "FAIL", "symlinks", "not followed")
     add("PASS", "scan-workers", f"effective max_workers={config.max_workers}")
+    if config.codex_storage.enabled:
+        effective_codex_home = Path(
+            os.environ.get("CODEX_HOME", Path.home() / ".codex")
+        ).expanduser().resolve()
+        expected_codex_home = config.codex_storage.home.resolve()
+        home_matches = os.path.normcase(str(effective_codex_home)) == os.path.normcase(
+            str(expected_codex_home)
+        )
+        home_ready = expected_codex_home.is_dir()
+        add(
+            "PASS" if home_matches and home_ready else "WARN",
+            "codex-home",
+            (
+                f"expected directory is missing: {expected_codex_home}"
+                if not home_ready
+                else (
+                    f"effective={effective_codex_home}; expected={expected_codex_home}"
+                    if home_matches
+                    else f"drift: effective={effective_codex_home}; expected={expected_codex_home}"
+                )
+            ),
+        )
+    else:
+        add("PASS", "codex-home", "Codex storage policy is disabled")
     if config.git_enabled:
         git_root, _tracked, git_message = tracked_files(config)
         oversized = oversized_tracked_files(config) if git_root else []

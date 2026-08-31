@@ -13,6 +13,7 @@ STORAGE_DIRECTORIES_V2 = (
     "00_System/ControlPlane",
     "00_System/Config",
     "00_System/Audit",
+    "00_System/Audit/CodexStorageMigration",
     "00_System/Manifests",
     "00_System/Policies",
     "00_System/Recovery",
@@ -30,6 +31,7 @@ STORAGE_DIRECTORIES_V2 = (
     "40_Media/Graphics",
     "50_Resources/ManagedAssets",
     "60_Private",
+    "60_Private/ToolState/Codex",
     "70_Inbox",
     "75_Exports",
     "80_Archive",
@@ -38,6 +40,7 @@ STORAGE_DIRECTORIES_V2 = (
     "90_Runtime/Logs",
     "90_Runtime/Runs/Import",
     "90_Runtime/Staging",
+    "90_Runtime/Staging/CodexStorageMigration",
     "90_Runtime/Temp",
     "90_Runtime/Worktrees",
     "99_Quarantine",
@@ -125,6 +128,16 @@ class StorageConfig:
 
 
 @dataclass(frozen=True)
+class CodexStorageConfig:
+    enabled: bool
+    home: Path
+    projects: Path
+    staging: Path
+    audit: Path
+    cleanup_retention_days: int
+
+
+@dataclass(frozen=True)
 class RagEmbeddingsConfig:
     enabled: bool
     provider: str
@@ -199,6 +212,7 @@ class Config:
     preserve_source: bool
     machine: MachineProfileConfig
     storage: StorageConfig
+    codex_storage: CodexStorageConfig
     backup: BackupConfig
     rag: RagConfig
     llm: LlmConfig
@@ -255,6 +269,7 @@ def load_config(path: str | Path, root_override: str | Path | None = None) -> Co
     privacy = _require_mapping(raw, "privacy")
     routing = _require_mapping(raw, "routing")
     backup = _require_mapping(raw, "backup")
+    codex_storage = _require_mapping(raw, "codex_storage")
     rag = _require_mapping(raw, "rag")
     rag_embeddings = rag.get("embeddings", {})
     if not isinstance(rag_embeddings, dict):
@@ -479,6 +494,45 @@ def load_config(path: str | Path, root_override: str | Path | None = None) -> Co
             allow_adopt=bool(storage.get("allow_adopt", False)),
             directories=tuple(storage.get("directories", STORAGE_DIRECTORIES_V2)),
         ),
+        codex_storage=CodexStorageConfig(
+            enabled=bool(codex_storage.get("enabled", schema_version == 2)),
+            home=_resolve(
+                root,
+                codex_storage.get(
+                    "home",
+                    "60_Private/ToolState/Codex"
+                    if schema_version == 2
+                    else "Private/ToolState/Codex",
+                ),
+            ),
+            projects=_resolve(
+                root,
+                codex_storage.get(
+                    "projects", "10_Projects" if schema_version == 2 else "Workspaces"
+                ),
+            ),
+            staging=_resolve(
+                root,
+                codex_storage.get(
+                    "staging",
+                    "90_Runtime/Staging/CodexStorageMigration"
+                    if schema_version == 2
+                    else "Staging/CodexStorageMigration",
+                ),
+            ),
+            audit=_resolve(
+                root,
+                codex_storage.get(
+                    "audit",
+                    "00_System/Audit/CodexStorageMigration"
+                    if schema_version == 2
+                    else "Logs/Audit/CodexStorageMigration",
+                ),
+            ),
+            cleanup_retention_days=int(
+                codex_storage.get("cleanup_retention_days", 14)
+            ),
+        ),
         backup=BackupConfig(
             repository=repository,
             password_file=password_file,
@@ -625,6 +679,21 @@ def validate_config(config: Config) -> None:
         raise ValueError("logging.max_bytes must be at least 1024")
     if not 1 <= config.logging.backup_count <= 20:
         raise ValueError("logging.backup_count must be between 1 and 20")
+    if config.codex_storage.cleanup_retention_days < 1:
+        raise ValueError("codex_storage.cleanup_retention_days must be positive")
+    codex_boundaries = (
+        ("home", config.codex_storage.home, config.private),
+        ("projects", config.codex_storage.projects, config.workspaces),
+        ("staging", config.codex_storage.staging, config.staging),
+        ("audit", config.codex_storage.audit, config.audit),
+    )
+    for name, path, boundary in codex_boundaries:
+        try:
+            path.relative_to(boundary)
+        except ValueError as exc:
+            raise ValueError(
+                f"codex_storage.{name} must remain inside {boundary}"
+            ) from exc
     marker = Path(config.storage.marker_file)
     if marker.is_absolute() or ".." in marker.parts or len(marker.parts) != 1:
         raise ValueError("storage.marker_file must be a root-level filename")
@@ -695,6 +764,14 @@ inbox = "{rel(config.inbox)}"
 processed = "{rel(config.processed)}"
 routing_runtime = "{rel(config.routing_runtime)}"
 {extra_paths}
+
+[codex_storage]
+enabled = {str(config.codex_storage.enabled).lower()}
+home = "{rel(config.codex_storage.home)}"
+projects = "{rel(config.codex_storage.projects)}"
+staging = "{rel(config.codex_storage.staging)}"
+audit = "{rel(config.codex_storage.audit)}"
+cleanup_retention_days = {config.codex_storage.cleanup_retention_days}
 
 [scan]
 follow_symlinks = false

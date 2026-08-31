@@ -10,10 +10,13 @@
 ```powershell
 .\vaultctl.ps1 bootstrap --config .\vault.toml.local --dry-run
 .\vaultctl.ps1 storage --config E:\KnowledgeVault\vault.toml.local audit --json
-.\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local plan --source E:\Brain
+.\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local plan `
+  --source C:\KnowledgeVault-Bootstrap\Brain_KnowledgeVault
 .\vaultctl.ps1 backup --config E:\KnowledgeVault\vault.toml.local preflight
 .\vaultctl.ps1 restore --config E:\KnowledgeVault\vault.toml.local drill
 .\vaultctl.ps1 windows-data --config E:\KnowledgeVault\vault.toml.local audit
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local audit
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local cleanup-plan
 ```
 
 `init/scan/plan/review/apply` залишаються для legacy/file migration. Для
@@ -50,9 +53,12 @@ rag       SQLite/FTS5 RAG sources layer: build/rebuild/sources/search
 ask       sources-only відповіді або optional local Ollama answer mode
 wiki      review-only wiki drafts: suggest/draft/approve/apply dry-run
 graph     rebuildable graph build/neighbors/export/stats
+codex-storage read-only Codex boundary audit і manual-only cleanup plan
 ```
 
 Автоматизація ніколи не видаляє і не переміщує source. `apply` виконує лише копіювання затверджених записів.
+`codex-storage cleanup-plan` не має execute-режиму й не видаляє навіть
+позначені cleanup-кандидати.
 RAG/LLM/Wiki/Graph використовують єдину visibility policy: `Private/`, `restricted` і `confidential` не читаються.
 
 Обидва migration pipelines використовують один `verified_copy`: повторна
@@ -80,7 +86,7 @@ Automation/
 ## Встановлення
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\install.ps1
 ```
 
@@ -114,6 +120,25 @@ CLI записує лише технічні події до `E:\KnowledgeVault\
 .\vaultctl.ps1 init --dry-run
 .\run_tests.ps1
 ```
+
+## Codex storage
+
+Production section у `vault.toml.local`:
+
+```toml
+[codex_storage]
+enabled = true
+home = "60_Private/ToolState/Codex"
+projects = "10_Projects"
+staging = "90_Runtime/Staging/CodexStorageMigration"
+audit = "00_System/Audit/CodexStorageMigration"
+cleanup_retention_days = 14
+```
+
+`audit` перевіряє effective `CODEX_HOME`, canonical paths, legacy
+`Documents\Codex`, protected AppData/runtime paths і відомі cleanup-
+кандидати. JSON evidence зберігається лише під configured audit path.
+Повний процес: [`docs/CODEX_STORAGE_RUNBOOK.md`](docs/CODEX_STORAGE_RUNBOOK.md).
 
 ## Створення KnowledgeVault
 

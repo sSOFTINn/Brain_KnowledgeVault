@@ -24,12 +24,22 @@ backup локальних документів, БД, untracked/ignored файл
 - LLM/embeddings вимкнені; Ollama — лише loopback, redirects заборонені;
 - Restic password зберігається поза Vault/Git і захищений ACL для поточного
   Windows SID.
+- `CODEX_HOME` дозволений лише в `60_Private\ToolState\Codex`; ця зона не
+  читається RAG/LLM, не комітиться й резервується лише в encrypted backup;
+- Codex storage audit не читає вміст auth/session/SQLite і не обходить
+  reparse points;
+- Codex cleanup automation створює лише hash-backed plan і не має execute-
+  режиму; видалення потребує окремого підтвердження точних targets.
 
 ## Секрети
 
 Не комітьте `vault.toml.local`, `.env`, tokens, private keys, BitLocker/Restic
 recovery data, Codex auth/session state або реальні користувацькі fixtures.
 Постійні audit/manifests не повинні містити secret values чи вміст документів.
+
+Не переносіть вручну desktop profile/runtime з `AppData`,
+`.cache\codex-runtimes`, binaries або внутрішні SQLite-файли. Загальні Windows
+`TEMP`/`TMP` не є підконтрольним Codex storage root і не перенаправляються.
 
 Відомий історичний ризик KV-018: tracked PDF у `Ризики/` має confidential
 label. Видалення з working tree не прибирає Git history. History rewrite

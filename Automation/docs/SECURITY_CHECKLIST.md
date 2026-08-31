@@ -21,5 +21,11 @@
 - [ ] `wiki summarize` не отримує external, Private, template або raw binary path.
 - [ ] Wiki draft і target не змінювалися після `wiki approve`.
 - [ ] Cleanup source виконується лише окремим ручним рішенням.
+- [ ] Effective `CODEX_HOME` дорівнює `60_Private\ToolState\Codex`.
+- [ ] `codex-storage audit` не показує drift або невідомі legacy paths.
+- [ ] `codex-storage cleanup-plan` має `execute_supported=false`; підтверджені
+      targets належать лише до дозволених cleanup-категорій.
+- [ ] Codex AppData, `.cache\codex-runtimes`, binaries, runtimes, SQLite і
+      загальні `TEMP`/`TMP` не перенесені й не видалені вручну.
 - [ ] Confidential-labelled файли не додаються в Git без явної classification/access review.
 - [ ] Для KV-017 є окремий план другої encrypted копії на іншому/off-site носії.

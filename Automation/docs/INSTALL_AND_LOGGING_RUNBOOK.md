@@ -6,7 +6,7 @@
 версії в `requirements.lock`, а build backend зафіксований у `pyproject.toml`.
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run_tests.ps1
 ```

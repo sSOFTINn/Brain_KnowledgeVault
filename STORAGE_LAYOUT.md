@@ -8,6 +8,7 @@ E:\KnowledgeVault\
 │   ├── ControlPlane\Brain_KnowledgeVault\
 │   ├── Config\
 │   ├── Audit\
+│   │   └── CodexStorageMigration\
 │   ├── Manifests\
 │   ├── Policies\
 │   ├── Recovery\
@@ -18,10 +19,12 @@ E:\KnowledgeVault\
 ├── 40_Media\{Photos,Video,Audio,Graphics}\
 ├── 50_Resources\ManagedAssets\
 ├── 60_Private\
+│   └── ToolState\Codex\
 ├── 70_Inbox\
 ├── 75_Exports\
 ├── 80_Archive\
 ├── 90_Runtime\{Catalog,Caches,Logs,Runs,Staging,Temp,Worktrees}\
+│   └── Staging\CodexStorageMigration\
 └── 99_Quarantine\
 ```
 
@@ -33,6 +36,12 @@ E:\KnowledgeVault\
 - `10_Projects\Completed` — придатний до збирання Git-проєкт;
 - `80_Archive` — заморожені матеріали, не активний checkout;
 - `60_Private` і `99_Quarantine` не індексуються;
+- `60_Private\ToolState\Codex` є канонічним захищеним `CODEX_HOME`;
+- довгострокові Codex-проєкти живуть у `10_Projects`, а не всередині
+  `CODEX_HOME` чи `Documents\Codex`;
+- Codex migration staging зберігається лише у
+  `90_Runtime\Staging\CodexStorageMigration`, а evidence — лише у
+  `00_System\Audit\CodexStorageMigration`;
 - `90_Runtime` відтворюваний і не є джерелом істини;
 - approvals, manifests і restore evidence постійно зберігаються в
   `00_System`;

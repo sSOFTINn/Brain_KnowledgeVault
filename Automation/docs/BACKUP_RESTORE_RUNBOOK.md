@@ -21,7 +21,7 @@ Repository на тому самому диску `E:` захищає від ло
 ## Перший запуск
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\vaultctl.ps1 backup init
 .\vaultctl.ps1 backup run
 .\vaultctl.ps1 backup check
@@ -35,7 +35,7 @@ cd E:\Brain\Automation
 
 - `Vault`, `Assets`, `Private`, `Workspaces`;
 - `vault.toml`, `MANIFEST.md`, `Runtime/runs`, `Logs`;
-- `E:\Brain\Automation`.
+- `E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation`.
 
 Виключено: `.venv`, `__pycache__`, `Runtime/cache`, `Runtime/db`,
 `Runtime/indexes`, `Staging`.

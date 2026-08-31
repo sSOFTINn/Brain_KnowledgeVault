@@ -13,6 +13,14 @@ inbox = "Staging/Inbox"
 processed = "Staging/Processed"
 routing_runtime = "Runtime/routing"
 
+[codex_storage]
+enabled = false
+home = "Private/ToolState/Codex"
+projects = "Workspaces"
+staging = "Staging/CodexStorageMigration"
+audit = "Logs/Audit/CodexStorageMigration"
+cleanup_retention_days = 14
+
 [scan]
 follow_symlinks = false
 hash_mode = "duplicates"

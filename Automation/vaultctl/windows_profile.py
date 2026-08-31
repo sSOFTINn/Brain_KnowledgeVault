@@ -23,7 +23,12 @@ class ProfileItem:
 
 POLICY = {
     ".cache": ("multiple applications", "disposable-cache", "application-specific", "Rebuild instead of relocating wholesale."),
-    ".codex": ("Codex", "supported-redirect", "CODEX_HOME", "Back up encrypted; never commit auth or session data."),
+    ".codex": (
+        "Codex",
+        "legacy-default-location",
+        "CODEX_HOME",
+        "Use codex-storage audit; keep canonical state private and never commit auth or sessions.",
+    ),
     ".copilot": ("GitHub Copilot", "manual-review", "none confirmed", "Keep on C until the format and supported path are confirmed."),
     ".dotnet": (".NET", "must-stay-on-C", "DOTNET_CLI_HOME only for supported state", "Review global tools before any change."),
     ".ipython": ("IPython", "supported-redirect", "IPYTHONDIR", "Move only profiles and configuration through the supported variable."),

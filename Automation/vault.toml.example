@@ -35,6 +35,14 @@ manifests = "00_System/Manifests"
 recovery = "00_System/Recovery"
 tool_state = "00_System/ToolState"
 
+[codex_storage]
+enabled = true
+home = "60_Private/ToolState/Codex"
+projects = "10_Projects"
+staging = "90_Runtime/Staging/CodexStorageMigration"
+audit = "00_System/Audit/CodexStorageMigration"
+cleanup_retention_days = 14
+
 [scan]
 follow_symlinks = false
 hash_mode = "duplicates"

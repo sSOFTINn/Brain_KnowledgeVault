@@ -1618,7 +1618,7 @@ scan
 ### 29.1. Встановлення і перевірка
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\install.ps1
 .\run_tests.ps1
 .\vaultctl.ps1 doctor
@@ -1644,8 +1644,53 @@ cd E:\Brain\Automation
 Канонічний готовий промпт для автономного продовження:
 
 ```text
-E:\Brain\Automation\EXECUTION_PROMPT.md
+E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation\EXECUTION_PROMPT.md
 ```
 
 Перед переходом до Phase 2 агент зобов'язаний виконати тести, подвійний
 `init`, `doctor` і `validate`.
+
+---
+
+## 30. Amendment: self-bootstrap і Codex storage
+
+### 30.1. Дві ролі control plane
+
+- до створення Vault репозиторій працює як тимчасовий bootstrap checkout
+  поза `E:\KnowledgeVault`;
+- після bootstrap він переноситься repository-aware pipeline до
+  `00_System\ControlPlane\Brain_KnowledgeVault` і стає canonical checkout;
+- bootstrap source зберігається до SHA-256, `git fsck`, verify та окремого
+  cleanup-рішення.
+
+### 30.2. Канонічні Codex boundaries
+
+```text
+CODEX_HOME = 60_Private\ToolState\Codex
+projects   = 10_Projects
+staging    = 90_Runtime\Staging\CodexStorageMigration
+evidence   = 00_System\Audit\CodexStorageMigration
+```
+
+Protected Windows paths (`AppData\Local\OpenAI\Codex`,
+`AppData\Local\Codex`, `AppData\Roaming\Codex`, `.cache\codex-runtimes`),
+загальні `TEMP`/`TMP`, binaries, runtimes і внутрішні SQLite не переносяться
+вручну та не входять до cleanup.
+
+### 30.3. Автоматизований контракт
+
+```powershell
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local audit
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local cleanup-plan
+```
+
+`audit` є read-only щодо зовнішніх даних. `cleanup-plan` враховує retention,
+фіксує точні paths і SHA-256 для файлів, має
+`execute_supported=false` та не є дозволом на видалення.
+
+Офіційні джерела OpenAI:
+
+- <https://learn.chatgpt.com/docs/config-file/environment-variables>
+- <https://learn.chatgpt.com/docs/config-file/config-advanced#config-and-state-locations>
+- <https://learn.chatgpt.com/docs/agent-configuration/agents-md>
+- <https://learn.chatgpt.com/docs/environments/git-worktrees>

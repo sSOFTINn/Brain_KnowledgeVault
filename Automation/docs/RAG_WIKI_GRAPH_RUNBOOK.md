@@ -3,7 +3,7 @@
 ## Build і rebuild
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\vaultctl.ps1 extract --rebuild
 .\vaultctl.ps1 index --rebuild
 .\vaultctl.ps1 rag build

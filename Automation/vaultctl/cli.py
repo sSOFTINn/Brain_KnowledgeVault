@@ -17,6 +17,7 @@ from .backup import (
     backup_run,
     backup_snapshots,
 )
+from .codex_storage import audit_codex_storage, create_codex_cleanup_plan
 from .doctor import checks_as_dict, has_failures, run_doctor
 from .event_log import record_command
 from .migrator import (
@@ -175,6 +176,23 @@ def _parser() -> argparse.ArgumentParser:
     _add_config(profile_cmd)
     profile_cmd.add_argument("action", choices=("audit",))
     profile_cmd.add_argument("--home")
+
+    codex_storage_cmd = subparsers.add_parser(
+        "codex-storage",
+        help="Audit Codex storage boundaries and create manual-only cleanup plans",
+    )
+    _add_config(codex_storage_cmd)
+    codex_storage_sub = codex_storage_cmd.add_subparsers(
+        dest="codex_storage_action", required=True
+    )
+    codex_storage_audit = codex_storage_sub.add_parser("audit")
+    codex_storage_audit.add_argument("--home")
+    codex_storage_audit.add_argument("--temp")
+    codex_storage_audit.add_argument("--json", action="store_true")
+    codex_storage_cleanup = codex_storage_sub.add_parser("cleanup-plan")
+    codex_storage_cleanup.add_argument("--home")
+    codex_storage_cleanup.add_argument("--temp")
+    codex_storage_cleanup.add_argument("--retention-days", type=int)
 
     rag_cmd = subparsers.add_parser("rag", help="Build and query the local RAG sources layer")
     _add_config(rag_cmd)
@@ -539,6 +557,42 @@ def _run(argv: list[str] | None = None) -> int:
             return 0
         except Exception as exc:
             print(f"[FAIL] windows-data: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+
+    if args.command == "codex-storage":
+        try:
+            if args.codex_storage_action == "audit":
+                output, payload = audit_codex_storage(
+                    config, home=args.home, temp=args.temp
+                )
+                if args.json:
+                    print(json.dumps(payload, ensure_ascii=False, indent=2))
+                else:
+                    status = "PASS" if payload["codex_home_matches"] else "FAIL"
+                    print(f"[{status}] Codex storage audit: {output}")
+                    print(
+                        "       "
+                        f"CODEX_HOME={payload['effective_codex_home']} "
+                        f"expected={payload['expected_codex_home']} "
+                        f"cleanup_candidates={payload['cleanup_candidate_count']}"
+                    )
+                return 0 if payload["codex_home_matches"] else 1
+            output, payload = create_codex_cleanup_plan(
+                config,
+                home=args.home,
+                temp=args.temp,
+                retention_days=args.retention_days,
+            )
+            print(f"[PASS] Manual-only Codex cleanup plan: {output}")
+            print(
+                "       "
+                f"rows={len(payload['rows'])} "
+                f"eligible={sum(bool(row['eligible']) for row in payload['rows'])} "
+                "execute_supported=false"
+            )
+            return 0
+        except Exception as exc:
+            print(f"[FAIL] codex-storage: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
 
     if args.command == "rag":

@@ -25,6 +25,15 @@
 
 ## Unreleased — audit alignment
 
+- додано repository-level `AGENTS.md`, Codex storage policy і runbook;
+- додано `[codex_storage]` із канонічними private/project/staging/audit
+  boundaries;
+- додано `vaultctl codex-storage audit` для read-only перевірки
+  `CODEX_HOME`, legacy paths, protected AppData/runtime і cleanup candidates;
+- додано `vaultctl codex-storage cleanup-plan`: retention-aware, SHA-256 для
+  файлів, `execute_supported=false` і без видалення source;
+- bootstrap checkout і canonical ControlPlane розділено як два етапи, щоб
+  усунути циклічність розгортання самого `Brain_KnowledgeVault`;
 - синхронізовано README, план, user guide, runbooks і execution prompts із
   незалежним аудитом та фактичним станом `main`;
 - додано поточний `AUDIT_STATUS.md`, не змінюючи історичний `audit/` snapshot;

@@ -2,13 +2,16 @@
 
 ## 1. Перед початком
 
-Працюйте з control plane з окремого checkout, доки нове сховище не пройде
-bootstrap і перевірку:
+Для нового диска працюйте з тимчасового checkout поза майбутнім Vault, доки
+сховище не пройде bootstrap і verified import. Для вже створеного Vault
+використовуйте canonical checkout:
 
 ```powershell
-cd E:\Brain\Automation
+cd E:\KnowledgeVault\00_System\ControlPlane\Brain_KnowledgeVault\Automation
 .\run_tests.ps1
 ```
+
+Деталі двоетапної моделі: [CONTROL_PLANE_BOOTSTRAP.md](CONTROL_PLANE_BOOTSTRAP.md).
 
 Створіть `vault.toml.local` з `vault.toml.example`. Укажіть реальні volume
 label/serial для `E:` і `F:`. Локальний файл конфігурації і секрети не комітьте.
@@ -65,8 +68,8 @@ label/serial для `E:` і `F:`. Локальний файл конфігура
 
 ```powershell
 .\vaultctl.ps1 import --config E:\KnowledgeVault\vault.toml.local plan `
-  --source "E:\Brain" `
-  --source "E:\The Codex"
+  --source "C:\KnowledgeVault-Bootstrap\Brain_KnowledgeVault" `
+  --source "<legacy-project-root>"
 ```
 
 Перевірте `git-repositories.csv`, `RESTORE_MAP.csv`, per-repository manifests,
@@ -165,6 +168,24 @@ Restic password лежить поза Vault у
 
 Команда лише інвентаризує і створює план. Вона не переносить `AppData`, не
 створює масових junction і не змінює environment variables.
+
+Для Codex використовуйте точніший аудит:
+
+```powershell
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local audit
+.\vaultctl.ps1 codex-storage --config E:\KnowledgeVault\vault.toml.local `
+  cleanup-plan --retention-days 14
+```
+
+Очікуваний `CODEX_HOME` —
+`E:\KnowledgeVault\60_Private\ToolState\Codex`. Довгострокові проєкти
+зберігаються у `10_Projects`; migration staging — у
+`90_Runtime\Staging\CodexStorageMigration`; evidence — у
+`00_System\Audit\CodexStorageMigration`.
+
+`cleanup-plan` лише перераховує відомі відновлювані залишки після retention.
+Він не видаляє файли. `AppData`, `.cache\codex-runtimes`, binaries, runtimes,
+SQLite і загальні `TEMP`/`TMP` не входять до автоматичного cleanup.
 
 ## 9. Заборони
 
